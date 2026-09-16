@@ -1,0 +1,39 @@
+{
+  "name": "layouter",
+  "title": "Layouter",
+  "description": "Launch a development workspace",
+  "categories": [
+    "Developer Tools"
+  ],
+  "license": "MIT",
+  "author": "masterpiece",
+  "icon": "icon.png",
+  "commands": [
+    {
+      "name": "layouter",
+      "title": "Layouter",
+      "description": "Choose a workflow and arguments for an optional project",
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "project",
+          "type": "text",
+          "placeholder": "Project directory (optional)",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "scripts": {
+    "build": "vici build"
+  },
+  "dependencies": {
+    "@vicinae/api": "0.28.2",
+    "react": "19.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "typescript": "^5.9"
+  }
+}
