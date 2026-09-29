@@ -7,6 +7,15 @@ adds its `.dev/` TOML and React/TSX workflows, with local precedence over global
 fallbacks, including across formats. Paths are passed literally; no shell
 expansion other than `~` is performed.
 
+In Vicinae's Layouter extension preferences, enable **Allow relative project
+paths** to also accept arguments such as `projects/my-app` or `./my-app`.
+**Relative path base directory** defaults to your home directory (`HOME`);
+set it to an existing absolute directory or `~/projects` to start elsewhere.
+An empty base also uses `HOME`. The base is only used for relative arguments
+while the setting is enabled (disabled by default). Absolute paths, `~/…`, and
+an empty project argument keep their existing behavior. `..` resolves normally
+and may refer to a directory outside the base.
+
 The form contains:
 
 - **Workflow:** searchable dropdown, initially `default`.

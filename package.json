@@ -8,6 +8,26 @@
   "license": "MIT",
   "author": "masterpiece",
   "icon": "icon.png",
+  "preferences": [
+    {
+      "name": "allowRelativePaths",
+      "type": "checkbox",
+      "title": "Relative project paths",
+      "label": "Allow relative project paths",
+      "description": "Resolve relative project arguments from the configured base directory.",
+      "required": false,
+      "default": false
+    },
+    {
+      "name": "relativePathBase",
+      "type": "textfield",
+      "title": "Relative path base directory",
+      "description": "Used when relative paths are enabled. Enter an absolute directory or ~/path. Empty or ~ uses your home directory (HOME).",
+      "required": false,
+      "default": "~",
+      "placeholder": "~"
+    }
+  ],
   "commands": [
     {
       "name": "layouter",

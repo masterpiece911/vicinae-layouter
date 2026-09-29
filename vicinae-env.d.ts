@@ -6,7 +6,11 @@
  */
 
 type ExtensionPreferences = {
-  
+  /** Relative project paths - Resolve relative project arguments from the configured base directory. */
+	"allowRelativePaths": boolean;
+
+	/** Relative path base directory - Used when relative paths are enabled. Enter an absolute directory or ~/path. Empty or ~ uses your home directory (HOME). */
+	"relativePathBase": string;
 }
 
 declare type Preferences = ExtensionPreferences

@@ -1,4 +1,4 @@
-import { Action, ActionPanel, Form, Toast, closeMainWindow, showToast } from "@vicinae/api";
+import { Action, ActionPanel, Form, Toast, closeMainWindow, getPreferenceValues, showToast } from "@vicinae/api";
 import type { LaunchProps } from "@vicinae/api";
 import { useEffect, useRef, useState } from "react";
 import { existsSync } from "node:fs";
@@ -6,12 +6,13 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 import { argumentValues, createClient } from "./client";
-import type { DescribedWorkflow, Metadata } from "./client";
+import type { DescribedWorkflow, Metadata, ProjectPathOptions } from "./client";
 
 const executable = existsSync(join(homedir(), ".local/bin/layouter")) ? join(homedir(), ".local/bin/layouter") : "layouter";
 const client = createClient(executable);
 
 export default function Layouter(props: LaunchProps<{ arguments: { project?: string } }>) {
+  const { allowRelativePaths, relativePathBase } = getPreferenceValues<ProjectPathOptions>();
   const [workflow, setWorkflow] = useState("default");
   const [metadata, setMetadata] = useState<Metadata>();
   const [inspection, setInspection] = useState<{ metadata: Metadata; selected: DescribedWorkflow }>();
@@ -28,12 +29,12 @@ export default function Layouter(props: LaunchProps<{ arguments: { project?: str
   useEffect(() => {
     let current = true;
     setLoading(true); setMetadata(undefined); setInspection(undefined); setError(""); setValues({});
-    client.list(projectPath)
+    client.list(projectPath, { allowRelativePaths, relativePathBase })
       .then(result => { if (current) setMetadata(result); })
       .catch(e => { if (current) setError(e.message); })
       .finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
-  }, [projectPath]);
+  }, [projectPath, allowRelativePaths, relativePathBase]);
 
   useEffect(() => {
     let current = true;

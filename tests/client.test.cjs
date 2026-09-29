@@ -64,6 +64,50 @@ test('project validation supports home and rejects relative or missing paths', a
   await assert.rejects(projectDirectory(join(build, 'missing')), /absolute directory/);
 });
 
+test('relative projects use HOME by default and allow a configured base only when enabled', async () => {
+  const enabled = { allowRelativePaths: true };
+  assert.equal(await projectDirectory('.', enabled), realpathSync(homedir()));
+  assert.equal(await projectDirectory('.', { ...enabled, relativePathBase: '' }), realpathSync(homedir()));
+  assert.equal(await projectDirectory('.', { ...enabled, relativePathBase: '~/.' }), realpathSync(homedir()));
+  const project = join(build, 'project ; $(literal)');
+  mkdirSync(project);
+  const options = { ...enabled, relativePathBase: build };
+  assert.equal(await projectDirectory('project ; $(literal)', options), realpathSync(project));
+  assert.equal(await projectDirectory('./project ; $(literal)/..', options), realpathSync(build));
+  await assert.rejects(projectDirectory('.', { relativePathBase: build }), /Enable relative/);
+  await assert.rejects(projectDirectory('.', { ...options, allowRelativePaths: false }), /Enable relative/);
+  await assert.rejects(projectDirectory('missing', options), /existing directory/);
+  for (const base of ['relative', join(build, 'missing'), join(build, 'client.js')]) {
+    await assert.rejects(projectDirectory('.', { ...enabled, relativePathBase: base }), /Relative path base/);
+  }
+  await assert.rejects(projectDirectory('client.js', options), /existing directory/);
+  const invalidBase = { ...enabled, relativePathBase: 'invalid' };
+  assert.equal(await projectDirectory(project, invalidBase), realpathSync(project));
+  assert.equal(await projectDirectory('~', invalidBase), realpathSync(homedir()));
+  assert.equal(await projectDirectory('', invalidBase), realpathSync(homedir()));
+});
+
+test('relative discovery passes the resolved project to every CLI stage and preserves global mode', async () => {
+  const calls = [];
+  const client = createClient('layouter', async (_, args) => {
+    calls.push(args);
+    if (args.includes('--list')) return json({ workflows: [record] });
+    if (args.includes('--describe')) return json({ workflow: { ...record, args: [] } });
+    return '';
+  });
+  const options = { allowRelativePaths: true, relativePathBase: build };
+  const metadata = await client.list('.', options);
+  const project = realpathSync(build);
+  assert.equal(metadata.project, project);
+  assert.deepEqual(calls[0], ['-C', project, '--list', '--json']);
+  const selected = await client.describe(metadata.project, record);
+  await client.check(metadata.project, selected, []);
+  await client.launch(metadata.project, selected, []);
+  for (const args of calls) assert.equal(args[1], project);
+  await client.list('', options);
+  assert.deepEqual(calls.at(-1), ['-C', realpathSync(homedir()), '--global', '--list', '--json']);
+});
+
 test('subprocesses preserve literal argv and report nonzero diagnostics before JSON parsing', async () => {
   const values = ['', '--flag', '$(do not execute); spaces'];
   const output = await execute(process.execPath, ['-e', 'process.stdout.write(JSON.stringify(process.argv.slice(1)))', '--', ...values]);

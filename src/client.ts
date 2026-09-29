@@ -1,13 +1,14 @@
 import { execFile } from "node:child_process";
 import { realpath, stat } from "node:fs/promises";
 import { homedir } from "node:os";
-import { isAbsolute, join } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 
 export type Argument = { name: string; position: number; required: boolean; default?: string; choices?: string[]; help?: string };
 export type Workflow = { name: string; source: string; format: "toml" | "tsx"; description: string | null; args: Argument[] | null };
 export type DescribedWorkflow = Workflow & { args: Argument[] };
 export type Metadata = { project: string; workflows: Workflow[] };
 export type Execute = (file: string, args: string[]) => Promise<string>;
+export type ProjectPathOptions = { allowRelativePaths?: boolean; relativePathBase?: string };
 
 export const execute: Execute = (file, args) => new Promise((resolve, reject) => {
   const child = execFile(file, args, { maxBuffer: 4 * 1024 * 1024 }, (error, stdout, stderr) => {
@@ -47,12 +48,20 @@ function workflowRecord(value: unknown): Workflow {
   return w;
 }
 
-export async function projectDirectory(text: string): Promise<string> {
-  const path = !text || text === "~" ? homedir() : text.startsWith("~/") ? join(homedir(), text.slice(2)) : text;
+export async function projectDirectory(text: string, options: ProjectPathOptions = {}): Promise<string> {
+  let path = !text || text === "~" ? homedir() : text.startsWith("~/") ? join(homedir(), text.slice(2)) : text;
+  if (!isAbsolute(path) && options.allowRelativePaths) {
+    let base: string;
+    try { base = await projectDirectory(options.relativePathBase || "~"); }
+    catch { throw new Error("Relative path base must be an existing absolute directory (~/ is supported). Configure it in Layouter preferences."); }
+    path = resolve(base, path);
+  }
   try {
     if (isAbsolute(path) && (await stat(path)).isDirectory()) return await realpath(path);
   } catch { /* Report the same actionable error for invalid paths. */ }
-  throw new Error("Project must be an existing absolute directory (~/ is supported).");
+  throw new Error(options.allowRelativePaths
+    ? "Project must be an existing directory. Relative paths use the base directory in Layouter preferences (HOME by default)."
+    : "Project must be an existing absolute directory (~/ is supported). Enable relative project paths in Layouter preferences to use a relative path.");
 }
 
 export function argumentValues(args: Argument[] | null, values: Record<string, unknown>): string[] {
@@ -68,8 +77,8 @@ export function argumentValues(args: Argument[] | null, values: Record<string, u
 export function createClient(executable: string, run: Execute = execute) {
   const sourceOptions = (project: string, workflow: Workflow) => ["-C", project, "--file", workflow.source];
   return {
-    async list(projectText: string): Promise<Metadata> {
-      const project = await projectDirectory(projectText);
+    async list(projectText: string, options: ProjectPathOptions = {}): Promise<Metadata> {
+      const project = await projectDirectory(projectText, options);
       const data = envelope(await run(executable, ["-C", project, ...(!projectText ? ["--global"] : []), "--list", "--json"]));
       if (!Array.isArray(data.workflows)) throw new Error("Invalid Layouter workflow list.");
       return { project, workflows: data.workflows.map(workflowRecord) };
