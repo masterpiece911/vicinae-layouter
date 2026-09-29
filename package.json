@@ -25,7 +25,8 @@
     }
   ],
   "scripts": {
-    "build": "vici build"
+    "build": "vici build",
+    "test": "node --test tests/*.test.cjs"
   },
   "dependencies": {
     "@vicinae/api": "0.28.2",
